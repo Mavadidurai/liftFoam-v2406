@@ -8,10 +8,7 @@ ultraFastShockWaveModel.C
 dropletModel.C
 femtosecondDropletModel.C
 extremeConditionMaterialProperties.C
-phaseChangeWrapper.C
-nonEquilibriumPhaseChangeModel.C
 nonEquilibriumBoundaryCondition.C
-phaseChangeModel.C
 timeResolvedAnalytics.C
 multiScaleVisualization.C
 adaptiveTimeStep.C
@@ -29,7 +26,9 @@ dynamicRefineFvMesh.C
 ValidationReporter.C
 LIFTSolverConfig.C
 phaseChangeModelBase.C
-
+phaseChangeModel.C
+nonEquilibriumPhaseChangeModel.C
+phaseChangeWrapper.C
 
 
 EXE = $(FOAM_USER_APPBIN)/liftFoam

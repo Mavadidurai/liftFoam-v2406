@@ -1,4 +1,5 @@
 #include "phaseChangeModelBase.H"
+#include "fvCFD.H"
 
 namespace Foam
 {

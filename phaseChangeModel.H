@@ -52,11 +52,11 @@ public:
     //- Destructor
     virtual ~phaseChangeModel() = default;
 
-    // Member Functions
-    virtual void correct(const volScalarField& T);
-    virtual tmp<fvScalarMatrix> Sh(const volScalarField& h) const;
-    virtual void write() const;
-    virtual tmp<volScalarField> phaseChangeRate() const;
+    // Member functions - must implement all pure virtual functions
+    virtual void correct(const volScalarField& T) override;
+    virtual tmp<fvScalarMatrix> Sh(const volScalarField& h) const override;
+    virtual void write() const override;
+    virtual tmp<volScalarField> phaseChangeRate() const override;
 };
 
 } // End namespace Foam

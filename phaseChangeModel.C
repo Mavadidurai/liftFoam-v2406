@@ -8,7 +8,13 @@
 namespace Foam
 {
     defineTypeNameAndDebug(phaseChangeModel, 0);
-    defineRunTimeSelectionTable(phaseChangeModelBase, dictionary);
+     
+    addToRunTimeSelectionTable
+    (
+        phaseChangeModelBase,
+        phaseChangeModel,
+        dictionary
+    );
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -199,6 +205,15 @@ Foam::phaseChangeModel::phaseChangeRate() const
     return phaseChangeRate_;
 }
 
+// phaseChangeModel.C
+tmp<fvScalarMatrix> phaseChangeModel::Sh(const volScalarField& h) const
+{
+    calculatePhaseChangeRate();
+    const volScalarField& pcr = phaseChangeRate_();
+
+    return -fvm::Sp(pcr / (h + SMALL), h) + pcr;
+}
+
 void Foam::phaseChangeModel::write() const
 {
     Info<< "Phase Change Model parameters:" << nl
@@ -213,18 +228,6 @@ void Foam::phaseChangeModel::write() const
         phaseChangeRate_().write();
     }
     phaseIndicator_.write();
-}
-
-// ************************************************************************* //
-
-namespace Foam
-{
-    addToRunTimeSelectionTable
-    (
-        phaseChangeModelBase,        // baseType
-        phaseChangeModel,            // modelType
-        dictionary
-    );
 }
 
 // ************************************************************************* //
