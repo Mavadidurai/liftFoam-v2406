@@ -1,0 +1,4 @@
+include $(GENERAL_RULES)/mplib$(WM_MPLIB)
+include $(RULES)/mplib$(WM_MPLIB)
+
+include $(MAKE_DIR)/options
