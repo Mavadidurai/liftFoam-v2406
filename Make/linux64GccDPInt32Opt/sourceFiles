@@ -1,0 +1,16 @@
+SOURCE = \
+src/liftFoam.C \
+src/LIFTModel.C \
+src/LIFTConfig.C \
+src/phaseChangeModel.C \
+src/dropletModel.C \
+src/DimensionValidator.C \
+src/createAdditionalFields.C \
+src/twoTemperatureModel.C \
+src/femtosecondLaserModel.C \
+src/ultraFastShockWaveModel.C \
+src/extremeConditionMaterialProperties.C \
+src/radiationModel.C \
+src/advancedInterfaceCapturing.C \
+
+# sources

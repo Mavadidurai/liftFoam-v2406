@@ -1,34 +1,16 @@
-liftFoam.C
-globalFields.C
-createAdditionalFields.C
-LIFTModel.C
-twoTemperatureModel.C
-femtosecondLaserModel.C
-ultraFastShockWaveModel.C
-dropletModel.C
-femtosecondDropletModel.C
-extremeConditionMaterialProperties.C
-nonEquilibriumBoundaryCondition.C
-timeResolvedAnalytics.C
-multiScaleVisualization.C
-adaptiveTimeStep.C
-vacuumBoundaryCondition.C
-twoPhaseMixtureProperties.C
-residualStressModel.C
-DimensionValidator.C
-LiftFoamConfigHandler.C
-radiationModel.C
-adaptiveMeshRefinement.C
-advancedInterfaceCapturing.C
-curvatureModel.C
-dropletMetrics.C
-dynamicRefineFvMesh.C
-ValidationReporter.C
-LIFTSolverConfig.C
-phaseChangeModelBase.C
-phaseChangeModel.C
-nonEquilibriumPhaseChangeModel.C
-phaseChangeWrapper.C
+src/liftFoam.C
+src/LIFTModel.C
+src/LIFTConfig.C
+src/phaseChangeModel.C
+src/dropletModel.C
+src/DimensionValidator.C
+src/createAdditionalFields.C
+src/twoTemperatureModel.C
+src/femtosecondLaserModel.C
+src/ultraFastShockWaveModel.C
+src/extremeConditionMaterialProperties.C
+src/radiationModel.C
+src/advancedInterfaceCapturing.C
 
 
 EXE = $(FOAM_USER_APPBIN)/liftFoam

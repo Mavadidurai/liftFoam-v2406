@@ -2,3 +2,15 @@ include $(GENERAL_RULES)/mplib$(WM_MPLIB)
 include $(RULES)/mplib$(WM_MPLIB)
 
 include $(MAKE_DIR)/options
+
+include $(GENERAL_RULES)/transform
+
+.PHONY: all clean
+all: $(FOAM_USER_APPBIN)/liftFoam
+
+clean:
+	rm -rf Make/linux64GccDPInt32Opt
+	rm -f $(FOAM_USER_APPBIN)/liftFoam
+	
+$(FOAM_USER_APPBIN)/liftFoam:
+	wmake
