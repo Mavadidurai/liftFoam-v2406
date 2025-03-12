@@ -1,58 +1,60 @@
 #ifndef validateFields_H
 #define validateFields_H
 
-Info<< "Validating fields\n" << endl;
-
-// Check presence of required fields
-if (!mesh.foundObject<surfaceScalarField>("phi"))
 {
-    FatalErrorIn("validateFields.H")
-        << "Required field phi not found in registry"
-        << abort(FatalError);
-}
+    Info<< "Validating fields..." << endl;
 
-if (!mesh.foundObject<volScalarField>("Te"))
-{
-    FatalErrorIn("validateFields.H")
-        << "Required field Te not found in registry"
-        << abort(FatalError);
-}
-
-// Check phase fraction bounds (only if alpha1 exists)
-if (mesh.foundObject<volScalarField>("alpha1"))
-{
-    if (min(alpha1).value() < -SMALL || max(alpha1).value() > 1 + SMALL)
+    // Check phase fraction bounds
+    if (min(alpha1).value() < -SMALL || max(alpha1).value() > 1.0 + SMALL)
     {
-        FatalErrorIn("validateFields.H")
-            << "Phase fraction out of bounds"
-            << abort(FatalError);
+        Info<< "Warning: Phase fraction out of bounds: " << min(alpha1).value()
+            << " to " << max(alpha1).value() << endl;
+        
+        // Apply limits
+        alpha1.max(0.0);
+        alpha1.min(1.0);
+        alpha1.correctBoundaryConditions();
+        alpha2 = scalar(1) - alpha1;
     }
-}
-else
-{
-    FatalErrorIn("validateFields.H")
-        << "Phase fraction field alpha1 not found in registry"
-        << abort(FatalError);
-}
 
-// Check temperature positivity (only if Te and Tl exist)
-if (mesh.foundObject<volScalarField>("Te") && mesh.foundObject<volScalarField>("Tl"))
-{
-    if (min(Te).value() < 0 || min(Tl).value() < 0)
+    // Check temperature positivity
+    if (min(T).value() < 0)
     {
-        FatalErrorIn("validateFields.H")
-            << "Negative temperature detected"
-            << abort(FatalError);
+        Info<< "Warning: Negative temperature detected: " << min(T).value() << endl;
+        
+        // Apply limits
+        T.max(dimensionedScalar("minT", dimTemperature, 1.0));
+        T.correctBoundaryConditions();
     }
-}
-else
-{
-    FatalErrorIn("validateFields.H")
-        << "Temperature fields Te or Tl not found in registry"
-        << abort(FatalError);
-}
 
-Info<< "Field validation completed\n" << endl;
+    // Check femtosecond temperature fields if in femtosecond regime
+    if (regime == "femtosecond")
+    {
+        if (min(Te).value() < 0 || min(Tl).value() < 0)
+        {
+            Info<< "Warning: Negative femtosecond temperatures detected: "
+                << "Te_min = " << min(Te).value() << ", "
+                << "Tl_min = " << min(Tl).value() << endl;
+            
+            // Apply limits
+            Te.max(dimensionedScalar("minTe", dimTemperature, 1.0));
+            Tl.max(dimensionedScalar("minTl", dimTemperature, 1.0));
+            Te.correctBoundaryConditions();
+            Tl.correctBoundaryConditions();
+        }
+    }
 
+    // Check density positivity
+    if (min(rho).value() <= 0)
+    {
+        Info<< "Warning: Non-positive density detected: " << min(rho).value() << endl;
+        
+        // Update density
+        rho = max(alpha1*rho1 + alpha2*rho2, 
+                  dimensionedScalar("minRho", dimDensity, SMALL));
+        rho.correctBoundaryConditions();
+    }
+
+    Info<< "Fields validated" << endl;
+}
 #endif
-

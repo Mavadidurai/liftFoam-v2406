@@ -1,5 +1,4 @@
 #include "createAdditionalFields.H"
-#include "DimensionValidator.H"
 
 namespace Foam
 {
@@ -23,6 +22,7 @@ void createMandatoryFields(fvMesh& mesh)
             dimensionedScalar("zero", dimless, 0)
         );
         mesh.objectRegistry::store(cellLevelPtr);
+        Info << "Created cellLevel field" << endl;
     }
 
     if (!fieldExists(mesh, "pointLevel")) 
@@ -41,12 +41,13 @@ void createMandatoryFields(fvMesh& mesh)
             dimensionedScalar("zero", dimless, 0)
         );
         mesh.objectRegistry::store(pointLevelPtr);
+        Info << "Created pointLevel field" << endl;
     }
 }
 
 bool fieldExists(const fvMesh& mesh, const word& fieldName)
 {
-    return mesh.foundObject<volScalarField>(fieldName);
+    return mesh.foundObject<regIOobject>(fieldName);
 }
 
 bool validateField
@@ -82,7 +83,7 @@ void createAdditionalFields(fvMesh& mesh)
             << abort(FatalError);
     }
 
-    const word requiredFields[] = 
+    const wordList requiredFields = 
     {
         "U",
         "p",
@@ -96,6 +97,20 @@ void createAdditionalFields(fvMesh& mesh)
     {
         if (!fieldExists(mesh, fieldName))
         {
+            dimensionSet dims(0, 0, 0, 0, 0, 0, 0);
+            
+            // Set appropriate dimensions
+            if (fieldName == "U")
+                dims = dimensionSet(0, 1, -1, 0, 0, 0, 0);  // m/s
+            else if (fieldName == "p")
+                dims = dimensionSet(1, -1, -2, 0, 0, 0, 0); // kg/(m*s²)
+            else if (fieldName == "alpha.titanium")
+                dims = dimensionSet(0, 0, 0, 0, 0, 0, 0);   // dimensionless
+            else if (fieldName == "T")
+                dims = dimensionSet(0, 0, 0, 1, 0, 0, 0);   // K
+            else if (fieldName == "rho")
+                dims = dimensionSet(1, -3, 0, 0, 0, 0, 0);  // kg/m³
+            
             auto fieldPtr = new volScalarField
             (
                 IOobject
@@ -103,12 +118,14 @@ void createAdditionalFields(fvMesh& mesh)
                     fieldName,
                     mesh.time().timeName(),
                     mesh,
-                    IOobject::READ_IF_PRESENT,  // Changed from MUST_READ_IF_PRESENT
+                    IOobject::READ_IF_PRESENT,
                     IOobject::AUTO_WRITE
                 ),
-                mesh
+                mesh,
+                dimensionedScalar("zero", dims, 0.0)
             );
             mesh.objectRegistry::store(fieldPtr);
+            Info << "Created field: " << fieldName << endl;
         }
     }
 }

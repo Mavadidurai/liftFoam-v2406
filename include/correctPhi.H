@@ -2,9 +2,11 @@
 #ifndef CORRECT_PHI_H
 #define CORRECT_PHI_H
 
-// correctPhi.H
 {
     #include "continuityErrs.H"
+
+    // Define rAUf if not already defined
+    surfaceScalarField rAUf = fvc::interpolate(rAU);
 
     // Flux predictor using absolute flux from cell center velocities
     phi = mesh.Sf() & fvc::interpolate(U);
@@ -21,7 +23,10 @@
     {
         const volScalarField& pcr = 
             mesh.lookupObject<volScalarField>("phaseChangeRate");
-        phi += fvc::interpolate(pcr/rho1);
+        if (gMax(mag(pcr)) > SMALL)
+        {
+            phi += fvc::interpolate(pcr/rho1)*mesh.magSf();
+        }
     }
 
     // Non-conservative fluxes by optional user-defined sources 

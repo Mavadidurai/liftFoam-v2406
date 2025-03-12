@@ -1,7 +1,45 @@
-#ifndef CREATE_FIELDS_H
-#define CREATE_FIELDS_H
+// createFields.H
 
-Info<< "Initializing fields\n" << endl;
+Info<< "Reading transportProperties\n" << endl;
+IOdictionary transportProperties
+(
+    IOobject
+    (
+        "transportProperties",
+        runTime.constant(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    )
+);
+
+// Reading gravitational acceleration
+Info<< "Reading gravitational acceleration\n" << endl;
+uniformDimensionedVectorField g
+(
+    IOobject
+    (
+        "g",
+        runTime.constant(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::NO_WRITE
+    ),
+    uniformDimensionedVectorField
+    (
+        IOobject
+        (
+            "g",
+            runTime.constant(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        dimensionedVector("g", dimAcceleration, vector(0, -9.81, 0))
+    )
+);
+
+// Read field p_rgh
 Info<< "Reading field p_rgh\n" << endl;
 volScalarField p_rgh
 (
@@ -10,12 +48,14 @@ volScalarField p_rgh
         "p_rgh",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::READ_IF_PRESENT,
         IOobject::AUTO_WRITE
     ),
-    mesh
+    mesh,
+    dimensionedScalar("p_rgh", dimPressure, 0.0)
 );
 
+// Read field U
 Info<< "Reading field U\n" << endl;
 volVectorField U
 (
@@ -24,24 +64,28 @@ volVectorField U
         "U",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
+        IOobject::READ_IF_PRESENT,
         IOobject::AUTO_WRITE
     ),
-    mesh
+    mesh,
+    dimensionedVector("U", dimVelocity, vector::zero)
 );
 
 #include "createPhi.H"
 
-Info<< "Reading transportProperties\n" << endl;
+// Create two-phase mixture model
+Info<< "Creating two-phase mixture model\n" << endl;
 immiscibleIncompressibleTwoPhaseMixture mixture(U, phi);
 
+// Get references to phase fractions
 volScalarField& alpha1(mixture.alpha1());
 volScalarField& alpha2(mixture.alpha2());
 
 const dimensionedScalar& rho1 = mixture.rho1();
 const dimensionedScalar& rho2 = mixture.rho2();
 
-// Need to store rho for ddt(rho, U)
+// Create density field for ddt(rho, U)
+Info<< "Creating field rho\n" << endl;
 volScalarField rho
 (
     IOobject
@@ -57,6 +101,7 @@ volScalarField rho
 rho.oldTime();
 
 // Mass flux
+Info<< "Creating field rhoPhi\n" << endl;
 surfaceScalarField rhoPhi
 (
     IOobject
@@ -68,7 +113,26 @@ surfaceScalarField rhoPhi
         IOobject::NO_WRITE
     ),
     fvc::interpolate(rho)*phi
-);Info<< "Creating temperature fields\n" << endl;
+);
+
+// Temperature field
+Info<< "Reading/creating field T\n" << endl;
+volScalarField T
+(
+    IOobject
+    (
+        "T",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("T0", dimTemperature, 300.0)
+);
+
+// Femtosecond temperature fields
+Info<< "Reading/creating electron temperature field Te\n" << endl;
 volScalarField Te
 (
     IOobject
@@ -80,9 +144,10 @@ volScalarField Te
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Te", dimTemperature, 300.0)
+    dimensionedScalar("Te0", dimTemperature, 300.0)
 );
 
+Info<< "Reading/creating lattice temperature field Tl\n" << endl;
 volScalarField Tl
 (
     IOobject
@@ -94,9 +159,11 @@ volScalarField Tl
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("Tl", dimTemperature, 300.0)
+    dimensionedScalar("Tl0", dimTemperature, 300.0)
 );
 
+// Laser source field
+Info<< "Creating laser source field\n" << endl;
 volScalarField laserSource
 (
     IOobject
@@ -108,9 +175,11 @@ volScalarField laserSource
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimPower/dimVolume, 0)
+    dimensionedScalar("zero", dimPower/dimVolume, 0.0)
 );
 
+// Phase change rate field
+Info<< "Creating phase change rate field\n" << endl;
 volScalarField phaseChangeRate
 (
     IOobject
@@ -122,12 +191,30 @@ volScalarField phaseChangeRate
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0)
+    dimensionedScalar("zero", dimMass/dimVolume/dimTime, 0.0)
 );
-#include "readGravitationalAcceleration.H"
-#include "readhRef.H"
-#include "gh.H"
 
+// Reference height for hydrostatic pressure
+dimensionedScalar hRef
+(
+    "hRef",
+    dimLength,
+    mixture.lookupOrDefault<scalar>("hRef", 0.0)
+);
+
+// Hydrostatic pressure reference point
+dimensionedScalar ghRef
+(
+    "ghRef",
+    g.dimensions()*dimLength,
+    0
+);
+
+// Hydrostatic pressure at cell centers and faces
+volScalarField gh("gh", g & mesh.C());
+surfaceScalarField ghf("ghf", g & mesh.Cf());
+
+// Create absolute pressure
 volScalarField p
 (
     IOobject
@@ -135,37 +222,75 @@ volScalarField p
         "p",
         runTime.timeName(),
         mesh,
-        IOobject::NO_READ,
+        IOobject::READ_IF_PRESENT,
         IOobject::AUTO_WRITE
     ),
     p_rgh + rho*gh
 );
 
-// MRF
+// Surface tension and interface compression
+dimensionedScalar sigma
+(
+    "sigma",
+    dimForce/dimLength,
+    transportProperties.lookupOrDefault<scalar>("sigma", 0.07)
+);
+
+// Create MRF
 #include "createMRF.H"
 
-// Turbulence
-turbulence = incompressible::turbulenceModel::New(U, phi, mixture);
-// Initialize fvOptions
+// Create turbulence model
+Info<< "Creating turbulence model\n" << endl;
+autoPtr<incompressible::turbulenceModel> turbulence
+(
+    incompressible::turbulenceModel::New(U, phi, mixture)
+);
+
+// Read fvOptions
 Info<< "Reading fvOptions\n" << endl;
 fv::options& fvOptions(fv::options::New(mesh));
 
-// Final validation
-bool fieldsOK = 
-    mesh.foundObject<volScalarField>("cellLevel") &&
-    mesh.foundObject<volScalarField>("pointLevel") &&
-    mesh.foundObject<volScalarField>("alpha.titanium") &&
-    mesh.foundObject<volVectorField>("U") &&
-    mesh.foundObject<surfaceScalarField>("phi") &&
-    mesh.foundObject<volScalarField>("p") &&
-    mesh.foundObject<volScalarField>("Te") &&
-    mesh.foundObject<volScalarField>("Tl");
+// Thermal properties
+dimensionedScalar thermalDiffusivity
+(
+    "thermalDiffusivity",
+    dimArea/dimTime,
+    transportProperties.lookupOrDefault<scalar>("thermalDiffusivity", 1e-5)
+);
 
-if (!fieldsOK)
-{
-    FatalErrorIn("createFields.H")
-        << "Not all required fields were created"
-        << abort(FatalError);
-}
+// Interface compression coefficient
+dimensionedScalar cAlphaCoeff
+(
+    "cAlpha",
+    dimless,
+    transportProperties.lookupOrDefault<scalar>("cAlpha", 1.0)
+);
 
-#endif
+// Create volume-weighted flux needed in the PISO loop
+surfaceScalarField phig
+(
+    IOobject
+    (
+        "phig",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    ghf*fvc::snGrad(rho)*mesh.magSf()
+);
+
+// Create volume-weighted mass flux
+surfaceScalarField alphaPhi
+(
+    IOobject
+    (
+        "alphaPhi",
+        runTime.timeName(),
+        mesh
+    ),
+    phi*fvc::interpolate(alpha1)
+);
+
+// Make sure all fluxes and fields are stored in the registry
+mesh.objectRegistry::store(new surfaceScalarField(phi));

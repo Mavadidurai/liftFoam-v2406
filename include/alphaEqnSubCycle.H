@@ -1,17 +1,12 @@
 #ifndef alphaEqnSubCycle_H
 #define alphaEqnSubCycle_H
+// alphaEqnSubCycle.H
 
 {
-   const label nAlphaSubCycles = pimple.dict().lookupOrDefault("nAlphaSubCycles", 1);
-
+    // Apply subcycling to improve stability for alpha equation
     if (nAlphaSubCycles > 1)
     {
-        // Store original phi
-        surfaceScalarField phiCopy = phi;
-        
         dimensionedScalar totalDeltaT = runTime.deltaT();
-
-        // Initialize sum field with proper dimensions
         surfaceScalarField rhoPhiSum
         (
             IOobject
@@ -20,35 +15,34 @@
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE  // Changed from default
+                IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("zero", rhoPhi.dimensions(), 0.0)
+            dimensionedScalar("zero", rhoPhi.dimensions(), 0)
         );
 
-        // Correct subcycling loop syntax
-        subCycle<volScalarField> alphaSubCycle(alpha1, nAlphaSubCycles);
-        while (!(++alphaSubCycle).end())  // Corrected loop structure
+        // Loop through sub-cycles
+        for
+        (
+            subCycle<volScalarField> alphaSubCycle(alpha1, nAlphaSubCycles);
+            !(++alphaSubCycle).end();
+        )
         {
-            // Update phi for subcycle
-            phi = phiCopy * (runTime.deltaT()/totalDeltaT);
-            
+            // Solve alpha equation for this subcycle
             #include "alphaEqn.H"
-
-            rhoPhiSum += (runTime.deltaT()/totalDeltaT) * rhoPhi;
+            
+            // Accumulate weighted rhoPhi for the timestep
+            rhoPhiSum += (runTime.deltaT()/totalDeltaT)*rhoPhi;
         }
 
-        // Restore original phi
-phi = phiCopy;
-mesh.objectRegistry::store(new surfaceScalarField(phi));
-
+        // Correct the flux using the accumulated values
         rhoPhi = rhoPhiSum;
     }
     else
     {
+        // No subcycling, just solve the alpha equation once
         #include "alphaEqn.H"
     }
 }
 
 #endif
-

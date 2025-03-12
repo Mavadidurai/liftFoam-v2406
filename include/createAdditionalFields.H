@@ -1,8 +1,8 @@
+// createAdditionalFields.H
 #ifndef createAdditionalFields_H
 #define createAdditionalFields_H
 
 #include "fvCFD.H"
-#include "volFields.H"
 
 namespace Foam
 {
@@ -11,6 +11,7 @@ namespace Foam
 
     // Original field validation 
     bool fieldExists(const fvMesh& mesh, const word& fieldName);
+    
     bool validateField
     (
         const volScalarField& field,

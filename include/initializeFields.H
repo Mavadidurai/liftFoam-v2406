@@ -2,7 +2,9 @@
 #define initializeFields_H
 
 {
-    // Initialize mixture 
+    Info<< "Initializing fields..." << endl;
+    
+    // Initialize mixture properties
     mixture.correct();
 
     // Initialize density and flux fields
@@ -10,33 +12,60 @@
     rhoPhi = fvc::interpolate(rho)*phi;
 
     // Initialize temperature fields
-    Te.correctBoundaryConditions();
-    Tl.correctBoundaryConditions();
+    T.correctBoundaryConditions();
     
-    // Initialize phase change and laser fields
-    phaseChangeRate.correctBoundaryConditions();
-    laserSource.correctBoundaryConditions();
-
-    // Time controls 
-    scalar maxCo = pimple.dict().lookupOrDefault("maxCo", 0.5);
-    scalar maxAlphaCo = pimple.dict().lookupOrDefault("maxAlphaCo", 0.2);
-
-    // Apply the time controls
-    if (mesh.nInternalFaces())
+    // Initialize femtosecond-specific fields if in femtosecond regime
+    if (regime == "femtosecond")
     {
-        scalarField sumPhi(fvc::surfaceSum(mag(phi))().primitiveField());
-        scalar CoNum = 0.5*gMax(sumPhi/mesh.V().field())*runTime.deltaTValue();
-        scalar alphaCoNum = 0.5*gMax
-        (
-            sumPhi/(mesh.V().field()*mesh.surfaceInterpolation::deltaCoeffs().primitiveField())
-        )*runTime.deltaTValue();
-
-        if (CoNum > maxCo || alphaCoNum > maxAlphaCo)
+        // Ensure Te and Tl exist
+        if (mesh.foundObject<volScalarField>("Te"))
         {
-            scalar deltaTFact = min(maxCo/(CoNum + SMALL), maxAlphaCo/(alphaCoNum + SMALL));
-            runTime.setDeltaT(deltaTFact*runTime.deltaTValue());
+            volScalarField& Te = const_cast<volScalarField&>(
+                mesh.lookupObject<volScalarField>("Te"));
+            Te.correctBoundaryConditions();
+        }
+        
+        if (mesh.foundObject<volScalarField>("Tl"))
+        {
+            volScalarField& Tl = const_cast<volScalarField&>(
+                mesh.lookupObject<volScalarField>("Tl"));
+            Tl.correctBoundaryConditions();
+        }
+        
+        if (mesh.foundObject<volScalarField>("laserSource"))
+        {
+            volScalarField& laserSource = const_cast<volScalarField&>(
+                mesh.lookupObject<volScalarField>("laserSource"));
+            laserSource.correctBoundaryConditions();
+        }
+        
+        if (mesh.foundObject<volScalarField>("phaseChangeRate"))
+        {
+            volScalarField& phaseChangeRate = const_cast<volScalarField&>(
+                mesh.lookupObject<volScalarField>("phaseChangeRate"));
+            phaseChangeRate.correctBoundaryConditions();
         }
     }
+
+    // Initialize pressure fields
+    p = p_rgh + rho*gh;
+    p.correctBoundaryConditions();
+    p_rgh.correctBoundaryConditions();
+
+    // Ensure all fields are properly registered in mesh
+    if (!mesh.foundObject<surfaceScalarField>("phi"))
+    {
+        mesh.objectRegistry::store(new surfaceScalarField(phi));
+    }
+
+    // Initialize flux field
+    phi = linearInterpolate(U) & mesh.Sf();
+    phi.correctBoundaryConditions();
+
+    // Initialize mass flux
+    rhoPhi = fvc::interpolate(rho)*phi;
+
+    Info<< "Fields initialized" << endl;
 }
 
 #endif

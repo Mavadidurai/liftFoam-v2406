@@ -212,14 +212,16 @@ public:
         bool isNonEquilibrium = false
     );
 
-    static autoPtr<phaseChangeModel> New
-    (
-        const word& modelType,
-        const fvMesh& mesh,
-        const volScalarField& T,
-        volScalarField& alpha1,
-        const dictionary& dict
-    );
+// Factory method
+static autoPtr<phaseChangeModel> New
+(
+    const word& modelType,
+    const fvMesh& mesh,
+    const volScalarField& T,
+    volScalarField& alpha1,
+    const dictionary& dict
+);
+
 
     //- Destructor 
     virtual ~phaseChangeModel() = default;

@@ -106,7 +106,24 @@ phaseChangeModel::phaseChangeModel
     }
 }
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
-
+autoPtr<phaseChangeModel> phaseChangeModel::New
+(
+    const word& modelType,
+    const fvMesh& mesh,
+    const volScalarField& T,
+    volScalarField& alpha1,
+    const dictionary& dict
+)
+{
+    // Default to non-equilibrium mode for femtosecond model
+    bool isNonEquilibrium = (modelType == "femtosecondPhaseChange");
+    
+    // Create and return the model
+    return autoPtr<phaseChangeModel>
+    (
+        new phaseChangeModel(mesh, T, alpha1, dict, isNonEquilibrium)
+    );
+}
 /*---------------------------------------------------------------------------*\
     Calculate phase change rate based on temperature and phase state
 \*---------------------------------------------------------------------------*/
